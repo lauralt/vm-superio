@@ -29,18 +29,28 @@ The following UART registers are emulated via the
 SR (a brief, but nice presentation about these,
 [here](https://www.lammertbies.nl/comm/info/serial-uart#regs)).
 The Fifo Control Register (FCR) is not emulated since we are not interested in
-directly controlling the FIFOs (which, in our case, are always enabled) and
-The Receiver Buffer and Transmitter Holding Buffer registers (THR and RBR)
-functionality is simplified, yet extended by using a single FIFO buffer. When
-reading from RBR, the oldest unread byte from the FIFO is returned and when
-writing to THR, the FIFO buffer is extended with the new byte. This buffer helps
-in testing the UART when running in loopback mode and for keeping the guest
-output to a `Write` object (`out`). The VMM that will use the serial console,
-when instantiating a `Serial`, will have to provide a `Write` object for it (for
-example `io::Stdout` or `io::Sink`).
+directly controlling the FIFOs (which, in our case, are always enabled).
+For now, we are implementing only the RX FIFO (and its corresponding RBR 
+register). The RX buffer helps in testing the UART when running in loopback
+mode and for sending more bytes to the guest in one shot. The TX FIFO is not
+implemented yet. When the driver writes a byte for transmission, that byte is
+immediately redirected to a `io::Write` object (`out`). The VMM that will use
+the serial console, when instantiating a `Serial`, will have to provide such an
+object for it (for example `io::Stdout` or `io::Sink`).
+We do not monitor in any way the amount of data that is written to the `out`
+object. As a consequence, a malicious guest can fill up the host disk by
+generating a high amount of data to be written to the serial output. To avoid
+this, we recommend you use a resource that has a fixed size (e.g. a named pipe
+or a ring buffer). There is still a downside to this approach. When the `out`
+object is at full capacity, a `write` request will result in blocking the driver
+indefinitely. Even if we free up space in the meantime, because we are not
+sending the THR Empty Interrupt anymore, the driver can't continue to send
+bytes.
+We plan on implementing the TX FIFO and fixing the aforementioned issue, see
+[tracking issue](link to issue).
+
 A `Trigger` object is the currently used mechanism for notifying the driver
-when changes in the previously mentioned buffer happened that need to be
-handled.
+about in/out events that need to be handled.
 
 ### Usage
 
