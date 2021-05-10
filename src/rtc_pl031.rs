@@ -243,6 +243,8 @@ impl<EV: RTCEvents> RTC<EV> {
                 // Both ls & offset are u32, hence the following
                 // conversions are safe, and the result fits in an i64.
                 self.offset = self.lr as i64 - get_current_time() as i64;
+                println!("lr to write {:?}", self.lr);
+                println!("offset {:?}", self.offset);
             }
             RTCCR => {
                 // Writing 1 to the control register resets the RTC value,
@@ -288,7 +290,11 @@ impl<EV: RTCEvents> RTC<EV> {
             u32::from(AMBA_IDS[index])
         } else {
             match offset {
-                RTCDR => self.get_rtc_value(),
+                RTCDR => {
+                    let val = self.get_rtc_value();
+                    println!("dr read {:?}", val);
+                    val
+                },
                 RTCMR => {
                     // Read the match register.
                     // TODO: Implement the match register functionality.
